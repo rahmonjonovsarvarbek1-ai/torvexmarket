@@ -8,11 +8,21 @@
 // ────────────────────────────────────────────────────────────────
 // 1. FIREBASE CONFIGURATION
 // ────────────────────────────────────────────────────────────────
-// 1. Faqat kerakli narsalarni import qiling
+// 1. Firebase va xizmatlarni import qilish
 import { auth, db } from "./firebase-config.js"; 
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-// 2. 'let db, auth' qatorini o'chirib tashlang! 
+
+// Firestore xizmatlari
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Barcha Auth xizmatlarini bitta joyga jamlaymiz
+import { 
+    onAuthStateChanged, 
+    GoogleAuthProvider, 
+    signInWithPopup,
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword,
+    updateProfile 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 // Faqat konfiguratsiyada yo'q o'zgaruvchilarni qoldiring:
 let storage = null; 
 let currentUser = null;
@@ -1915,57 +1925,59 @@ function showGuestInUI() {
   if (sfUser) sfUser.style.display = "none";
 }
 
-function handleAuth(e) {
-  e.preventDefault();
-  const email    = document.getElementById("authEmail")?.value.trim();
-  const password = document.getElementById("authPass")?.value;
-  const isLogin  = document.getElementById("tabLogin")?.classList.contains("active");
+async function handleAuth(e) {
+    e.preventDefault();
+    
+    // 1. Elementlarni olish
+    const email = document.getElementById("authEmail")?.value.trim();
+    const password = document.getElementById("authPass")?.value;
+    const nameInput = document.getElementById("authName")?.value; // Ism inputi
+    const isLogin = document.getElementById("tabLogin")?.classList.contains("active");
 
-  clearAuthErrors();
+    clearAuthErrors();
 
-  if (!validateEmail(email)) { showFieldError("authEmailErr","Email noto'g'ri"); return; }
-  if (!password || password.length < 6) { showFieldError("authPassErr","Parol kamida 6 ta belgi"); return; }
+    // 2. Validatsiya
+    if (!validateEmail(email)) { showFieldError("authEmailErr", "Email noto'g'ri"); return; }
+    if (!password || password.length < 6) { showFieldError("authPassErr", "Parol kamida 6 ta belgi"); return; }
 
-  const btn     = document.getElementById("authBtn");
-  const spinner = document.getElementById("authSpinner");
-  if (btn) btn.disabled = true;
-  if (spinner) spinner.style.display = "inline";
+    const btn = document.getElementById("authBtn");
+    const spinner = document.getElementById("authSpinner");
+    if (btn) btn.disabled = true;
+    if (spinner) spinner.style.display = "inline";
 
-  if (auth) {
-    const promise = isLogin
-      ? auth.signInWithEmailAndPassword(email, password)
-      : auth.createUserWithEmailAndPassword(email, password);
-    promise
-      .then(cred => {
+    try {
+        // 3. Login yoki Ro'yxatdan o'tish (userCredential shu yerda yaratiladi)
+        const userCredential = isLogin
+            ? await signInWithEmailAndPassword(auth, email, password)
+            : await createUserWithEmailAndPassword(auth, email, password);
+        
+        // 4. AGAR yangi ro'yxatdan o'tayotgan bo'lsa (login emas), ismni yangilaymiz
+        if (!isLogin && nameInput) {
+            await updateProfile(userCredential.user, {
+                displayName: nameInput
+            });
+            console.log("Ism muvaffaqiyatli saqlandi:", nameInput);
+        }
+
+        console.log("Muvaffaqiyatli:", userCredential.user);
         closeModal("authModal");
-        showToast("Tizimga kirdingiz!", "success");
-      })
-      .catch(err => {
+        showToast(isLogin ? "Tizimga kirdingiz!" : "Ro'yxatdan o'tdingiz!", "success");
+
+    } catch (err) {
         const msgs = {
-          "auth/user-not-found":     "Foydalanuvchi topilmadi",
-          "auth/wrong-password":     "Parol noto'g'ri",
-          "auth/email-already-in-use":"Bu email allaqachon ro'yxatda",
-          "auth/weak-password":      "Parol juda zaif",
-          "auth/invalid-email":      "Email noto'g'ri formatda",
+            "auth/user-not-found": "Foydalanuvchi topilmadi",
+            "auth/wrong-password": "Parol noto'g'ri",
+            "auth/email-already-in-use": "Bu email allaqachon ro'yxatda",
+            "auth/weak-password": "Parol juda zaif",
+            "auth/invalid-email": "Email noto'g'ri formatda",
+            "auth/invalid-credential": "Email yoki parol xato",
         };
         showFieldError("authEmailErr", msgs[err.code] || err.message);
-      })
-      .finally(() => {
+        console.error("Xatolik kodi:", err.code);
+    } finally {
         if (btn) btn.disabled = false;
         if (spinner) spinner.style.display = "none";
-      });
-  } else {
-    // Demo mode
-    setTimeout(() => {
-      const demoUser = { displayName: document.getElementById("authName")?.value || "Demo Foydalanuvchi", email, photoURL: null };
-      currentUser = demoUser;
-      showUserInUI(demoUser);
-      closeModal("authModal");
-      showToast("Demo rejimda kirdingiz!", "success");
-      if (btn) btn.disabled = false;
-      if (spinner) spinner.style.display = "none";
-    }, 1000);
-  }
+    }
 }
 
 function switchAuthTab(tab) {
@@ -3276,3 +3288,15 @@ window.handleGlobalSearch = handleGlobalSearch;
 window.showSearchDropdown = showSearchDropdown;
 window.closeSearch   = closeSearch;
 window.startChatWith = startChatWith;
+
+async function loadProducts() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        querySnapshot.forEach((doc) => {
+            console.log(`${doc.id} =>`, doc.data());
+            // Bu yerda ma'lumotlarni HTML-ga render qilishingiz mumkin
+        });
+    } catch (e) {
+        console.error("Ma'lumotlarni o'qishda xatolik:", e);
+    }
+}
