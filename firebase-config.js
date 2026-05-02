@@ -1,53 +1,19 @@
-
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-    getAuth, 
-    GoogleAuthProvider, 
-
-    signInWithPopup, 
-    signInWithRedirect, 
-    getRedirectResult, 
-    onAuthStateChanged,
-    RecaptchaVerifier,
-    signInWithPhoneNumber,
-    signOut 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { initializeFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDc-kYemWOasjaYyLc5x0TVDxe93Jls2z8",
-    authDomain: "torvex-market.firebaseapp.com",
-    projectId: "torvex-market",
-    storageBucket: "torvex-market.firebasestorage.app",
-    messagingSenderId: "999014412743",
-    appId: "1:999014412743:web:1f061f466263c7b86769e2"
+  apiKey: "AIzaSyA3VYFqmxbCVxvITyW32DCam-T1zmPWqz8",
+  authDomain: "torvex-market.firebaseapp.com",
+  projectId: "torvex-market",
+  storageBucket: "torvex-market.firebasestorage.app",
+  messagingSenderId: "833011729259",
+  appId: "1:833011729259:web:29bae1c40f1d7ce503422e",
+  measurementId: "G-P0B3JB8WLQ"
 };
 
+// initializeApp faqat bir marta chaqirilishi kerak
 const app = initializeApp(firebaseConfig);
-
-// Firestore sozlamasi (Ulanish xatolarini o'ldirish uchun)
-export const db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-    useFetchStreams: false
-});
-
-export const auth = getAuth(app);
-
-
-
-
-
-export const googleProvider = new GoogleAuthProvider();
-
-
-// SCRIPT.JS QIDIRAYOTGAN BARCHA FUNKSIYALARNI EKSPORT QILAMIZ
-export { 
-    signInWithPopup, 
-    signInWithRedirect, 
-    getRedirectResult, 
-    onAuthStateChanged,
-    RecaptchaVerifier,
-    signInWithPhoneNumber,
-    signOut 
-};
+ export const auth = getAuth(app);
+export const db = getFirestore(app);
+export default app;

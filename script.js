@@ -8,34 +8,31 @@
 // ────────────────────────────────────────────────────────────────
 // 1. FIREBASE CONFIGURATION
 // ────────────────────────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+// 1. Faqat kerakli narsalarni import qiling
+import { auth, db } from "./firebase-config.js"; 
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+// 2. 'let db, auth' qatorini o'chirib tashlang! 
+// Faqat konfiguratsiyada yo'q o'zgaruvchilarni qoldiring:
+let storage = null; 
+let currentUser = null;
 
-let db, auth, storage, currentUser = null;
+// 3. Eski initFirebase() funksiyasi shart emas, 
+// chunki ulanish firebase-config.js ichida bajarilgan.
+// Buning o'rniga login holatini kuzatuvchini yozamiz:
 
-function initFirebase() {
-  try {
-    if (typeof firebase !== "undefined") {
-      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-      db      = firebase.firestore();
-      auth    = firebase.auth();
-      storage = firebase.storage();
-      auth.onAuthStateChanged(handleAuthStateChange);
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        console.log("Foydalanuvchi tizimda:", user.email);
+        // Bu yerda handleAuthStateChange(user) funksiyasini chaqirishingiz mumkin
     } else {
-      console.warn("Firebase yuklanmadi — demo rejimda ishlayapti");
-      loadDemoData();
+        currentUser = null;
+        console.log("Foydalanuvchi chiqib ketgan");
     }
-  } catch (e) {
-    console.warn("Firebase xatosi:", e.message);
-    loadDemoData();
-  }
-}
+});
+
+// Qolgan funksiyalaringizni pastdan davom ettiravering...
 
 // ────────────────────────────────────────────────────────────────
 // 2. DEMO / MOCK DATA
@@ -190,7 +187,6 @@ const state = {
 // 4. INIT
 // ────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  initFirebase();
   applyTheme(state.theme);
   hideLoadingScreen();
   renderDashboard();
@@ -2028,16 +2024,30 @@ function signOut() {
   }
 }
 
-function loginWithGoogle() {
-  if (auth) {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then(() => { closeModal("authModal"); showToast("Google bilan kirdingiz!", "success"); })
-      .catch(err => showToast(err.message, "error"));
-  } else {
-    showToast("Demo: Google kirish simulyatsiyasi", "info");
-    closeModal("authModal");
-  }
+// 2. Funksiyani yangilangan ko'rinishi
+export async function loginWithGoogle() {
+    // Google provayderini yaratamiz
+    const provider = new GoogleAuthProvider();
+    
+    try {
+        // Yangi modulli usulda tizimga kirish
+        const result = await signInWithPopup(auth, provider);
+        
+        // Muvaffaqiyatli kirganda bajariladigan ishlar
+        console.log("Foydalanuvchi:", result.user);
+        closeModal("authModal");
+        showToast("Google bilan kirdingiz!", "success");
+        
+    } catch (err) {
+        // Xatolik yuz berganda (masalan, foydalanuvchi oynani yopib qo'ysa)
+        console.error("Google login xatosi:", err.message);
+        
+        if (err.code === 'auth/api-key-not-valid') {
+            showToast("API kalit xatosi! Authentication bo'limini tekshiring.", "error");
+        } else {
+            showToast("Kirishda xatolik yuz berdi", "error");
+        }
+    }
 }
 
 function loginWithTelegram() { showToast("Telegram kirish tez orada", "info"); }
